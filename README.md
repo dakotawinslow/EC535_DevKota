@@ -2,8 +2,8 @@
 
 Work goes in here
 
-DevOld Summary:
--ktimer opens char dev file which runs init function in mytimer registering char dev and creating proc file
+'''DevOld Summary:'''
+'''-ktimer opens char dev file which runs init function in mytimer registering char dev and creating proc file'''
   -both use the same file operation structure(might want to play around with this to get different output between a cat /proc/mytimer and a call of read in user space)
     -currently calling cat uses the callback mytimer_proc_show using the seq_read interface (was first registered at file open)
 -ktimer sets up async signal handler to run at SIGIO flag from kernel
