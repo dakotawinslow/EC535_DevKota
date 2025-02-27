@@ -109,6 +109,30 @@ int main(int argc, char **argv) {
 
     else if(argc == 4 && (strcmp(argv[1], "-s") == 0)) // add a new timer with expiration in argv[2] and message in argv[3]
     {
+        // Check if timer with message already exists
+        // read the device and store in a buffer
+        char buffer[KERN_BUF];
+        ssize_t bytes_read = read(pFile, buffer, KERN_BUF - 1);
+        if (bytes_read < 0) {
+            perror("Failed to read from device");
+            close(pFile);
+            return EXIT_FAILURE;
+        }
+        buffer[bytes_read] = '\0';
+
+        // iterate through the list of timers and check if the message already exists
+        int i =0;
+        char *token_msg;
+        char *token = strtok(buffer, "\n");
+        while (token != NULL) {
+            token_msg = strtok(token, " ");
+            if (strcmp(token_msg, argv[3]) == 0) {
+                // printf("DEBUG: token_msg: [%s], argv[3]: [%s]\n", token_msg, argv[3]);
+                // printf("The timer %s was updated!\n", argv[3]);
+            }
+            token = strtok(NULL, "\n");
+        }
+
         snprintf(to_kernel, sizeof(to_kernel), "-s %s %s", argv[2], argv[3]);
         // read(pFile, )
         // printf("DEBUG: user_input before write: [%s]\n", to_kernel);
@@ -117,7 +141,7 @@ int main(int argc, char **argv) {
     }
 
 
-    printf("Closing out!\n");
+    // printf("Closing out!\n");
     // Closes.
     close(pFile);
     return 0;

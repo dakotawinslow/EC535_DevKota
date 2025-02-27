@@ -17,19 +17,19 @@ echo "TEST: Empty timer list:"
 ./ktimer -l
 
 echo "TEST: Set a 2s timer called bob:"
-./ktimer -s 2 bob
+./ktimer -s 2 bob &
 ./ktimer -l
 
 sleep 3
 
 echo "TEST: Set a 30s timer called billy:"
-./ktimer -s 30 billy
+./ktimer -s 30 billy &
 ./ktimer -l
 
 sleep 1
 
 echo "TEST: Modify the 30s timer to 2s:"
-./ktimer -s 2 billy
+./ktimer -s 2 billy &
 ./ktimer -l
 
 

@@ -230,7 +230,7 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
             snprintf(kernel_out, sizeof(kernel_out), "%u timer(s) already exist(s)!\n", allowed_timers);
         }
     }
-    printk(KERN_INFO "Done with write\n");
+    // printk(KERN_INFO "Done with write\n");
 
     return count;
 }
@@ -276,8 +276,11 @@ static int mytimer_proc_show(struct seq_file *m, void *v) {
 static int mytimer_chrdev_show(struct seq_file *m, void *v) {
     int i;
     int offset = 0;
+    // printk(KERN_INFO "DEBUG: MAX_TIMERS is %d\n", MAX_TIMERS);
     for(i = 0; i < MAX_TIMERS; i++) {
         if(timers[i].active) {
+            // printk(KERN_INFO "DEBUG: Timer %d active\n", i);
+            // printk(KERN_INFO "DEBUG: msg - '%s', time -  '%lu'\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
             offset += snprintf(kernel_out + offset, sizeof(kernel_out) - offset,
                                "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
         }
