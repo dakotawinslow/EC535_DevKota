@@ -7,6 +7,12 @@ insmod /root/mytimer.ko
 echo "TEST: Help message:"
 ./ktimer -h
 
+echo "TEST: cat /dev/mytimer:"
+cat /dev/mytimer
+
+echo "TEST: cat /proc/mytimer:"
+cat /proc/mytimer
+
 echo "TEST: Empty timer list:"
 ./ktimer -l
 

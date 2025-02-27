@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     // Write to file.
     memset(to_kernel, 0, KERN_BUF);
     snprintf(to_kernel, KERN_BUF, "%s %s %s", argv[1], argv[2], argv[3]);
-    snprintf(timer_msg, MSG_LEN, "%s\n", argv[3]);
+    snprintf(timer_msg, MSG_LEN, "%s", argv[3]);
     // printf("to kernel %s, timer msg %s, argv1 %s, argv2 %s, argv3 %s\n", to_kernel, timer_msg, argv[1], argv[2], argv[3]);
 
     if(argc == 2 && (strcmp(argv[1], "-l") == 0)) // list timer(s) expiration message(s) and time(s)
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
             return EXIT_FAILURE;
         }
         buffer[bytes_read] = '\0';
-        printf("%s\n", buffer);
+        printf("%s", buffer);
     }
 
     else if(argc == 2 && (strcmp(argv[1], "-r") == 0)) // remove all timers
