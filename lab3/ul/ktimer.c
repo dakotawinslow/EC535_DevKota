@@ -122,19 +122,37 @@ int main(int argc, char **argv) {
 
         // iterate through the list of timers and check if the message already exists
         int i =0;
-        char *token_msg;
-        char *token = strtok(buffer, "\n");
-        while (token != NULL) {
-            token_msg = strtok(token, " ");
-            if (strcmp(token_msg, argv[3]) == 0) {
-                // printf("DEBUG: token_msg: [%s], argv[3]: [%s]\n", token_msg, argv[3]);
-                snprintf(to_kernel, sizeof(to_kernel), "-s %s %s", argv[2], argv[3]);
-                ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1); //access timer_write kernel function with string indicating how to setup new timer
-                printf("The timer %s was updated!\n", argv[3]);
-                close(pFile);
-                return 0;
+        char token_msg[129];
+        unsigned long expiration;
+        int allowed_timers;
+        int active_timers;
+
+        sscanf(buffer, "%128[^0-9] %lu %d %d", token_msg, &expiration, &active_timers, &allowed_timers);
+
+        for (int i = 0; token_msg[i] != '\0'; i++) {
+            if (token_msg[i] == ' ' && token_msg[i + 1] == '\0') {
+                token_msg[i] = '\0'; // Remove trailing space
             }
-            token = strtok(NULL, "\n");
+        }
+
+        for(int i = 0; i < sizeof(buffer); i++){
+            printf("%c", buffer[i]);
+        }
+
+        printf("MSG: %s, allowed timers %d, active timers %d\n", token_msg, allowed_timers, active_timers);
+
+        if(active_timers >= allowed_timers){
+            printf("%d timer(s) already exist(s)!\n", active_timers);
+            return 0;
+        }
+
+        if (strcmp(token_msg, argv[3]) == 0) {
+            // printf("DEBUG: token_msg: [%s], argv[3]: [%s]\n", token_msg, argv[3]);
+            snprintf(to_kernel, sizeof(to_kernel), "-s %s %s", argv[2], argv[3]);
+            ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1); //access timer_write kernel function with string indicating how to setup new timer
+            printf("The timer %s was updated!\n", argv[3]);
+            close(pFile);
+            return 0;
         }
 
         snprintf(to_kernel, sizeof(to_kernel), "-s %s %s", argv[2], argv[3]);

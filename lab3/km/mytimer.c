@@ -161,7 +161,7 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
             if(timers[i].active) {
                 printk(KERN_INFO "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
                 offset += snprintf(kernel_out + offset, sizeof(kernel_out) - offset,
-                                   "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
+                                   "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ);
             }
         }
         return count;
@@ -306,15 +306,16 @@ static int mytimer_proc_show(struct seq_file *m, void *v) {
 static int mytimer_chrdev_show(struct seq_file *m, void *v) {
     int i;
     int offset = 0;
-    kernel_out[0] = '\0';
     // printk(KERN_INFO "DEBUG: MAX_TIMERS is %d\n", MAX_TIMERS);
     for(i = 0; i < MAX_TIMERS; i++) {
+        
         if(timers[i].active) {
             // printk(KERN_INFO "DEBUG: Timer %d active\n", i);
             // printk(KERN_INFO "DEBUG: msg - '%s', time -  '%lu'\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
             offset += snprintf(kernel_out + offset, sizeof(kernel_out) - offset,
-                               "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
+                               "%s %lu %d %d\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ), number_active_timers, allowed_timers);
         }
+        printk(KERN_INFO "%s", kernel_out);
     }
     seq_printf(m, "%s", kernel_out);
     // seq_printf(m, "It's a me, the CharDev!\n");
