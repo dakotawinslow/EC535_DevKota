@@ -98,13 +98,13 @@ int main(int argc, char **argv) {
     else if(argc == 2 && (strcmp(argv[1], "-r") == 0)) // remove all timers
     {
         ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1);
-        pause();
+        return 0;
     }
 
     else if(argc == 4 && (strcmp(argv[1], "-m") == 0)) // set the kernel timer count to [count]
     {
         ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1);
-        pause();
+        return 0;
     }
 
     else if(argc == 4 && (strcmp(argv[1], "-s") == 0)) // add a new timer with expiration in argv[2] and message in argv[3]
@@ -128,7 +128,11 @@ int main(int argc, char **argv) {
             token_msg = strtok(token, " ");
             if (strcmp(token_msg, argv[3]) == 0) {
                 // printf("DEBUG: token_msg: [%s], argv[3]: [%s]\n", token_msg, argv[3]);
-                // printf("The timer %s was updated!\n", argv[3]);
+                snprintf(to_kernel, sizeof(to_kernel), "-s %s %s", argv[2], argv[3]);
+                ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1); //access timer_write kernel function with string indicating how to setup new timer
+                printf("The timer %s was updated!\n", argv[3]);
+                close(pFile);
+                return 0;
             }
             token = strtok(NULL, "\n");
         }
@@ -152,4 +156,5 @@ int main(int argc, char **argv) {
 void sighandler(int signo)
 {
     printf("%s\n", timer_msg);
+    // exit(0);
 }

@@ -166,6 +166,36 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
         }
         return count;
     }
+    else if (user_buf[1] == 'r') {
+        int i;
+        for(i = 0; i < MAX_TIMERS; i++) {
+            if (timer_pending(&timers[i].timer) && timers[i].active) {
+                del_timer_sync(&timers[i].timer); // Only delete if active
+                timers[i].active = 0;
+                number_active_timers --;
+            }
+        }
+        return count;
+    }
+    else if(user_buf[1] == 'm') {
+        char c_count[6] = {0};
+        uint count;
+        int i = 3;
+        int j = 0;
+
+        while(user_buf[i] != '\0' && j < 5) //extract expiration seconds from string
+        {
+            c_count[j] = user_buf[i];
+            i++;
+            j++;
+        }
+        c_count[j] = '\0';
+
+        count = my_atoi(c_count);
+
+        allowed_timers = count;
+        return count;
+    }
     else if(user_buf[1] == 's') {
 
         char user_msg[129] = {0};
@@ -204,7 +234,7 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
             if((my_strcmp(timers[k].timer_msg, user_msg) == 0) && timers[k].active) {
                 mod_timer(&timers[k].timer, jiffies + sec * HZ);
                 memset(kernel_out, 0, sizeof(kernel_out));
-                snprintf(kernel_out, sizeof(kernel_out), "The timer %s was updated!\n", timers[k].timer_msg);
+                // snprintf(kernel_out, sizeof(kernel_out), "The timer %s was updated!\n", timers[k].timer_msg);
                 return count;
             }
         }
@@ -276,6 +306,7 @@ static int mytimer_proc_show(struct seq_file *m, void *v) {
 static int mytimer_chrdev_show(struct seq_file *m, void *v) {
     int i;
     int offset = 0;
+    kernel_out[0] = '\0';
     // printk(KERN_INFO "DEBUG: MAX_TIMERS is %d\n", MAX_TIMERS);
     for(i = 0; i < MAX_TIMERS; i++) {
         if(timers[i].active) {
