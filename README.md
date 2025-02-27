@@ -38,6 +38,7 @@ Work goes in here
 - We need to implement the `-l` flag  
   - Need to find a way to read timers back to user space  
   - Options are proc file read or char dev read  
+  - Ended up using char dev read to prevent any conflict with proc file requirement
 
 - We need to implement the `-r`  
   - Already implemented in the last lab, can port over easily  
