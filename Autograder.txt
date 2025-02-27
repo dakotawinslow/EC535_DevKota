@@ -1,0 +1,59 @@
+ec535-stock:~# PS1='#\[\] ' PS2='#\[\] ' PROMPT_COMMAND=''
+# export PAGER=cat
+# ls
+[1;32mktimer [m [1;32mmytimer.ko [m [1;32mrenamed_ktimer [m [1;32mwelcome.txt [m
+# mknod /dev/mytimer c 61 0
+# insmod /root/mytimer.ko
+[ 2.135039] mytimer: no symbol version for module_layout
+[ 2.135375] mytimer: loading out-of-tree module taints kernel.
+[ 2.142386] Timer module loaded
+# lsmod
+mytimer 16384 0 - Live 0xbf000000 (O)
+# ##########Testing single timer
+# ./ktimer -s 3 "Singl""eTimer" &
+# SingleTimer
+[1]+ Done ./ktimer -s 3 "Singl""eTimer"
+# ##########Testing /proc
+# ./renamed_ktimer -s 3 "Test ""Message" &
+# pgrep ./renamed_ktimer
+100
+# cat /proc/mytimer
+Module name: mytimer
+Time since loaded (msec): 3872
+Userspace program PID: 100
+PID command name: renamed_ktimer
+Remaining time in timer: 2 seconds
+# ##########Testing -l
+# ./ktimer -l
+Test Message 2
+# ##########Testing updating
+#
+# ./ktimer -s 4 "Test ""Message"
+The timer Test Message has been updated!
+#
+# Test Message
+##########Testing -r
+[1]+ Done ./renamed_ktimer -s 3 "Test ""Message"
+# ./ktimer -s 2 "Test ""Message" &
+# ./ktimer -r
+[1]+ Terminated ./ktimer -s 2 "Test ""Message"
+# ##########Testing 'timer already exists'
+#
+# ./ktimer -s 2 "1st ""timer" &
+# ./ktimer -s 2 "2nd ""timer" &
+# Cannot add another timer!
+1st timer
+##########Testing -m
+[2]+ Done ./ktimer -s 2 "2nd ""timer"
+[1]+ Done ./ktimer -s 2 "1st ""timer"
+# ./ktimer -m 2
+Error: multiple timers not supported.
+#
+#
+# dmesg | tail -5
+[ 1.299152] Run /sbin/init as init process
+[ 1.473678] EXT4-fs (vda): re-mounted. Opts: (null)
+[ 2.135039] mytimer: no symbol version for module_layout
+[ 2.135375] mytimer: loading out-of-tree module taints kernel.
+[ 2.142386] Timer module loaded
+#
