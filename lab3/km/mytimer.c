@@ -116,7 +116,7 @@ static int mytimer_init(void)
         } else {
             proc_index = 0;
             next_message = 0;
-            printk(KERN_INFO "mytimer: Module loaded.\n");
+            // printk(KERN_INFO "mytimer: Module loaded.\n");
         }
     }
 
@@ -197,7 +197,7 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
         // c_count[j] = '\0';
 
         // count = my_atoi(c_count);
-        printk(KERN_INFO "DEBUG: user_buf[3] is '%c'\n", user_buf[3]);
+        // printk(KERN_INFO "DEBUG: user_buf[3] is '%c'\n", user_buf[3]);
         if (user_buf[3] == '1') {
             allowed_timers = 1;
             return count;
