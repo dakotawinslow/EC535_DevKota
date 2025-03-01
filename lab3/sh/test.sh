@@ -4,6 +4,7 @@
 mknod /dev/mytimer c 61 0
 insmod /root/mytimer.ko
 
+
 echo "TEST: Help message:"
 ./ktimer -h
 
@@ -20,11 +21,12 @@ echo "TEST: Set a 2s timer called bob:"
 ./ktimer -s 2 bob &
 echo "TEST: Listing timers:"
 ./ktimer -l
-ech0 "Sleeping 1..."
+echo "Sleeping 1..."
 sleep 1 
 echo "TEST: Listing timers:"
 ./ktimer -l
 
+echo "Sleeping 3..."
 sleep 3
 
 echo "TEST: Set a 30s timer called billy:"
@@ -32,6 +34,7 @@ echo "TEST: Set a 30s timer called billy:"
 echo "TEST: Listing timers:"
 ./ktimer -l
 
+echo "Sleeping 1..."
 sleep 1
 
 echo "TEST: Modify the 30s timer to 2s:"

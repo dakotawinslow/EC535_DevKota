@@ -24,7 +24,7 @@ void print_help() {
     printf("Options:\n");
     printf("  -l                Read and print the contents of /dev/timer and quit\n");
     printf("  -s [sec] [msg]    Set a new timer of length [sec] with message [msg] and quit\n");
-    printf("  -m [count]        Set the kernel timer count to [count] and quit (max 2)\n");
+    printf("  -m [count]        Set the kernel timer count to [count] and quit (1 or 2 only)\n");
     printf("  -r                Remove all timers and quit\n");
     printf("  -h, --help        Print this help message and quit\n");
     printf("  -v, --version     Print version and copyright information\n");
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
             close(pFile);
             return EXIT_FAILURE;
         }
-        buffer[bytes_read] = '\0';
+        buffer[bytes_read - 4] = '\0';
         printf("%s", buffer);
     }
 
@@ -101,10 +101,17 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    else if(argc == 4 && (strcmp(argv[1], "-m") == 0)) // set the kernel timer count to [count]
+    else if(argc == 3 && (strcmp(argv[1], "-m") == 0)) // set the kernel timer count to [count]
     {
-        ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1);
-        return 0;
+        if (argv[2][0] == '2' || argv[2][0] == '1') {
+            ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1);
+            return 0;
+        } else {
+            printf("Only 1 or 2 timers allowed!\n");
+            return 0;
+        }
+
+
     }
 
     else if(argc == 4 && (strcmp(argv[1], "-s") == 0)) // add a new timer with expiration in argv[2] and message in argv[3]
@@ -122,39 +129,31 @@ int main(int argc, char **argv) {
 
         // iterate through the list of timers and check if the message already exists
         int i =0;
-        // char token_msg[129];
+        char token_msg[129];
         unsigned long expiration;
         int allowed_timers;
         int active_timers;
 
-        // sscanf(buffer, "%128[^0-9] %lu %d %d", token_msg, &expiration, &active_timers, &allowed_timers);
+        // message ends with "...\n N N"
+        //Re-terminate the string, cutting off the trailer data
+        int cutoff_pos = strlen(buffer) - 4;
+        char *cutoff = buffer + cutoff_pos;
+        *cutoff = '\0';
+        // parse the cutoff data by measuring offset from '0'
+        // poor man's char to int conversion
+        active_timers  = (char)cutoff[1] - '0';
+        allowed_timers = (char)cutoff[3] - '0';
 
-        // for (int i = 0; token_msg[i] != '\0'; i++) {
-        //     if (token_msg[i] == ' ' && token_msg[i + 1] == '\0') {
-        //         token_msg[i] = '\0'; // Remove trailing space
-        //     }
-        // }
-
-        // for(int i = 0; i < sizeof(buffer); i++){
-        //     printf("%c", buffer[i]);
-        // }
-
-        // printf("MSG: %s, allowed timers %d, active timers %d\n", token_msg, allowed_timers, active_timers);
-
-        // if(active_timers >= allowed_timers){
-        //     printf("%d timer(s) already exist(s)!\n", active_timers);
-        //     return 0;
-        // }
-        // split the buffer into tokens on '/n'
-        active_timers = 0;
+        //split the buffer into tokens on '/n'
         char *token = strtok(buffer, "\n");
         while (token != NULL) {
-            active_timers++;
-            printf("DEBUG: active_timers: %d\n", active_timers);
+            // printf("DEBUG: active_timers: %d\n", active_timers);
             // find last instance of space
             char *last_space = strrchr(token, ' ');
             // replace the last space with a null terminator
             *last_space = '\0';
+
+            // printf("DEBUG: token: [%s], argument: [%s]\n", token, argv[3]);
 
             if (strcmp(token, argv[3]) == 0) {
                 // printf("DEBUG: token_msg: [%s], argv[3]: [%s]\n", token_msg, argv[3]);
@@ -166,6 +165,13 @@ int main(int argc, char **argv) {
             }
             token = strtok(NULL, "\n");
         }
+
+        // check if we have too many timers
+        if(active_timers >= allowed_timers) {
+            printf("%d timer(s) already exist(s)!\n", active_timers);
+            return 0;
+        }
+
         snprintf(to_kernel, sizeof(to_kernel), "-s %s %s", argv[2], argv[3]);
         // read(pFile, )
         // printf("DEBUG: user_input before write: [%s]\n", to_kernel);

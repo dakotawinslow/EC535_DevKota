@@ -6,10 +6,11 @@
 
 cd $WORKSPACE/km
 make clean
-make
+make || { echo "Kernel module make failed"; exit 1; }
+
 cd $WORKSPACE/ul
 make clean
-make
+make || { echo "User-level make failed"; exit 1; }
 
 cd $WORKSPACE
 cp $WORKSPACE/km/*.ko $WORKSPACE/rootfs/root/

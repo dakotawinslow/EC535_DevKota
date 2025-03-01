@@ -32,6 +32,9 @@ static ssize_t mytimer_write(struct file *filp,
 static void mytimer_handler(struct timer_list*);
 static int mytimer_async(int fd, struct file *filp, int mode);
 static int mytimer_proc_show(struct seq_file *m, void *v);
+static ssize_t mytimer_read(struct file *filp,
+                            char *buf, size_t count, loff_t *f_pos);
+static int prepare_read_msg(void);
 uint my_atoi(const char* seconds);
 char * my_strcpy(char *dest, const char *src);
 int my_strcmp(const char *str1, const char *str2);
@@ -63,7 +66,8 @@ struct fasync_struct *async_queue; /* structure for keeping track of asynchronou
 
 
 struct file_operations chrdev_fops = {
-    .read = seq_read,
+    .owner = THIS_MODULE,
+    .read = mytimer_read,
     .write = mytimer_write,
     .open = mytimer_open,
     .fasync = mytimer_async,
@@ -87,6 +91,8 @@ static int mytimer_init(void)
 
     int result;
 
+    printk(KERN_INFO "Loading mytimer module\n");
+
     module_load_time = jiffies;
 
     result = register_chrdev(timer_major, "mytimer", &chrdev_fops);
@@ -96,7 +102,6 @@ static int mytimer_init(void)
         return result;
 
     }
-
     mytimer_info = (char *)vmalloc(MAX_INFO_LENGTH);
 
     if (!mytimer_info) {
@@ -152,21 +157,21 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
 
     user_buf[min(count, sizeof(user_buf) - 1)] = '\0';
 
-    if(user_buf[1] == 'l') {
+    // if(user_buf[1] == 'l') {
 
-        int i;
-        int offset = 0;
-        memset(kernel_out, 0, sizeof(kernel_out));
-        for(i = 0; i < MAX_TIMERS; i++) {
-            if(timers[i].active) {
-                printk(KERN_INFO "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
-                offset += snprintf(kernel_out + offset, sizeof(kernel_out) - offset,
-                                   "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ);
-            }
-        }
-        return count;
-    }
-    else if (user_buf[1] == 'r') {
+    //     int i;
+    //     int offset = 0;
+    //     memset(kernel_out, 0, sizeof(kernel_out));
+    //     for(i = 0; i < MAX_TIMERS; i++) {
+    //         if(timers[i].active) {
+    //             // printk(KERN_INFO "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
+    //             offset += snprintf(kernel_out + offset, sizeof(kernel_out) - offset,
+    //                                "%s %lu\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
+    //         }
+    //     }
+    //     return count;
+    // }
+    if (user_buf[1] == 'r') {
         int i;
         for(i = 0; i < MAX_TIMERS; i++) {
             if (timer_pending(&timers[i].timer) && timers[i].active) {
@@ -178,23 +183,30 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
         return count;
     }
     else if(user_buf[1] == 'm') {
-        char c_count[6] = {0};
-        uint count;
-        int i = 3;
-        int j = 0;
+        // char c_count[6] = {0};
+        // int count;
+        // int i = 3;
+        // int j = 0;
 
-        while(user_buf[i] != '\0' && j < 5) //extract expiration seconds from string
-        {
-            c_count[j] = user_buf[i];
-            i++;
-            j++;
+        // while(user_buf[i] != '\0' && j < 5) //extract expiration seconds from string
+        // {
+        //     c_count[j] = user_buf[i];
+        //     i++;
+        //     j++;
+        // }
+        // c_count[j] = '\0';
+
+        // count = my_atoi(c_count);
+        printk(KERN_INFO "DEBUG: user_buf[3] is '%c'\n", user_buf[3]);
+        if (user_buf[3] == '1') {
+            allowed_timers = 1;
+            return count;
+        } else if (user_buf[3] == '2') {
+            allowed_timers = 2;
+            return count;
         }
-        c_count[j] = '\0';
-
-        count = my_atoi(c_count);
-
-        allowed_timers = count;
         return count;
+
     }
     else if(user_buf[1] == 's') {
 
@@ -254,13 +266,13 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
                     return count;
                 }
             }
-        } else {
-            printk(KERN_INFO "%u timer(s) already exist(s)!\n", allowed_timers);
-            memset(kernel_out, 0, sizeof(kernel_out));
-            snprintf(kernel_out, sizeof(kernel_out), "%u timer(s) already exist(s)!\n", allowed_timers);
-        }
+        } // else {
+        // printk(KERN_INFO "%d timer(s) already exist(s)!\n", allowed_timers);
+        // memset(kernel_out, 0, sizeof(kernel_out));
+        // snprintf(kernel_out, sizeof(kernel_out), "%d timer(s) already exist(s)!\n", allowed_timers);
+        // }
     }
-    // printk(KERN_INFO "Done with write\n");
+// printk(KERN_INFO "Done with write\n");
 
     return count;
 }
@@ -303,35 +315,94 @@ static int mytimer_proc_show(struct seq_file *m, void *v) {
     return 0;
 }
 
-static int mytimer_chrdev_show(struct seq_file *m, void *v) {
+/**
+ * timer_read - Read handler for the timer control file.
+ * @file: Pointer to the file structure.
+ * @buf: User-space buffer to copy data to.
+ * @count: Number of bytes to read.
+ * @ppos: Current position in the file.
+ *
+ * Return: Number of bytes read or an error code.
+ */
+static ssize_t mytimer_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
+{
+    char *message;
+    char has_room;
+    int len;
+
+    // prepeare the message to be read (will be stored in kernel_out)
+    prepare_read_msg();
+
+    len = strlen(kernel_out);
+    // printk(KERN_INFO "The length of the message is %d\n", len);
+
+    // If *ppos is greater than or equal to len, return 0 to indicate end of file
+    if (*ppos >= len)
+    {
+        // kfree(message);
+        // *ppos = 0; // Reset the file position pointer
+        return 0;
+    }
+
+    // Adjust count if it exceeds the remaining length of the message
+    if (count > len - *ppos)
+        count = len - *ppos;
+
+    // Copy data to user space
+    if (copy_to_user(buf, kernel_out + *ppos, count))
+    {
+        // kfree(message);
+        return -EFAULT;
+    }
+
+    // Update the file position pointer
+    *ppos += count;
+
+    // Free the allocated memory for the message
+    // kfree(message);
+
+    return count;
+}
+
+static int prepare_read_msg(void)
+{
     int i;
     int offset = 0;
+
     // printk(KERN_INFO "DEBUG: MAX_TIMERS is %d\n", MAX_TIMERS);
     for(i = 0; i < MAX_TIMERS; i++) {
-        
+
+        // printk(KERN_INFO "DEBUG: Timer %d active: %d\n", i, timers[i].active);
         if(timers[i].active) {
             // printk(KERN_INFO "DEBUG: Timer %d active\n", i);
             // printk(KERN_INFO "DEBUG: msg - '%s', time -  '%lu'\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ));
             offset += snprintf(kernel_out + offset, sizeof(kernel_out) - offset,
-                               "%s %lu %d %d\n", timers[i].timer_msg, ((timers[i].timer.expires - jiffies)/HZ), number_active_timers, allowed_timers);
+                               "%s %lu\n",
+                               timers[i].timer_msg,
+                               ((timers[i].timer.expires - jiffies)/HZ));
         }
-        printk(KERN_INFO "%s", kernel_out);
+        // printk(KERN_INFO "%s", kernel_out);
     }
-    seq_printf(m, "%s", kernel_out);
-    // seq_printf(m, "It's a me, the CharDev!\n");
+    // tack on information about currently set timers
+    offset += snprintf(kernel_out + offset, sizeof(kernel_out) - offset,
+                       " %d %d", number_active_timers, allowed_timers);
+    // printk(KERN_INFO "DEBUG: kernel_out is [%s]\n", kernel_out);
     return 0;
 }
 
 static int proc_open(struct inode *inode, struct file *filp) {
-    cat = 1;
+    // cat = 1;
     // printk(KERN_INFO "proc module opened\n");
     return single_open(filp, mytimer_proc_show, NULL);
+
 }
 
 static int mytimer_open(struct inode *inode, struct file *filp) {
-    cat = 1;
+    // cat = 1;
     // printk(KERN_INFO "chrdev module opened\n");
-    return single_open(filp, mytimer_chrdev_show, NULL);
+    // return single_open(filp, mytimer_chrdev_show, NULL);
+    // printk(KERN_INFO "DEBUG: mytimer_open() opened\n");
+    return 0;
 }
 
 static int mytimer_release(struct inode *inode, struct file *filp) {
@@ -373,4 +444,3 @@ int my_strcmp(const char *str1, const char *str2) {
     }
     return *(unsigned char *)str1 - *(unsigned char *)str2;
 }
-
