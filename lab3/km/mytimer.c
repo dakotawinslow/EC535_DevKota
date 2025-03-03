@@ -67,6 +67,7 @@ struct timer_info
     int active;
 };
 
+static void send_wakeup_call(struct timer_info *timer);
 struct timer_info timers[MAX_TIMERS];
 struct fasync_struct *async_queue; /* structure for keeping track of asynchronous readers */
 
@@ -297,17 +298,29 @@ static int mytimer_async(int fd, struct file *filp, int mode) {
 static void mytimer_handler_0(struct timer_list *data) {
     number_active_timers --;
     timers[0].active = 0;
+    send_wakeup_call(&timers[0]);
     // printk(KERN_INFO "timer expired\n");
-    if (async_queue)
-        kill_fasync(&async_queue, SIGIO, POLL_IN);
+    // if (async_queue)
+    //     kill_fasync(&async_queue, SIGIO, POLL_IN);
 }
 
 static void mytimer_handler_1(struct timer_list *data) {
     number_active_timers --;
     timers[1].active = 0;
+    send_wakeup_call(&timers[1]);
     // printk(KERN_INFO "timer expired\n");
-    if (async_queue)
-        kill_fasync(&async_queue, SIGIO, POLL_IN);
+    // if (async_queue)
+    //     kill_fasync(&async_queue, SIGIO, POLL_IN);
+}
+
+static void send_wakeup_call(struct timer_info *timer) {
+    struct pid *pid_struct;
+    struct task_struct *task;
+    pid_struct = find_get_pid(timer->owner_pid);
+    task = pid_task(pid_struct, PIDTYPE_PID);
+    if (task != NULL) {
+        send_sig(SIGIO, task, 1);
+    }
 }
 
 static int mytimer_proc_show(struct seq_file *m, void *v) {

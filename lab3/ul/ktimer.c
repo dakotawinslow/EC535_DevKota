@@ -219,81 +219,81 @@ int main(int argc, char **argv) {
 
 }
 
-// // SIGIO handler
-// void sighandler(int signo)
-// {
-//     printf("%s\n", timer_msg);
-//     // exit(0);
-// }
+// SIGIO handler
+void sighandler(int signo)
+{
+    printf("%s\n", timer_msg);
+    // exit(0);
+}
 
 // SIGIO handler
-void sighandler(int signo) {
-    struct sigaction sa;
-    sa.sa_handler = sighandler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGIO, &sa, NULL);
-    char buffer[KERN_BUF];
-    int is_our_time = 1;
-    ssize_t bytes_read;
-    int my_pid = getpid();
+// void sighandler(int signo) {
+//     struct sigaction sa;
+//     sa.sa_handler = sighandler;
+//     sigemptyset(&sa.sa_mask);
+//     sa.sa_flags = 0;
+//     sigaction(SIGIO, &sa, NULL);
+//     char buffer[KERN_BUF];
+//     int is_our_time = 1;
+//     ssize_t bytes_read;
+//     int my_pid = getpid();
 
-    // Read from the proc file
-    int pFile = open(PROC_FILE, O_RDWR);
-    if (pFile < 0) {
-        fprintf(stderr, "Failed to open /proc/mytimer\n");
-        return;
-    }
-    bytes_read = read(pFile, buffer, KERN_BUF - 1);
-    if (bytes_read < 0) {
-        perror("Failed to read from /proc/mytimer");
-        close(pFile);
-        return;
-    }
+//     // Read from the proc file
+//     int pFile = open(PROC_FILE, O_RDWR);
+//     if (pFile < 0) {
+//         fprintf(stderr, "Failed to open /proc/mytimer\n");
+//         return;
+//     }
+//     bytes_read = read(pFile, buffer, KERN_BUF - 1);
+//     if (bytes_read < 0) {
+//         perror("Failed to read from /proc/mytimer");
+//         close(pFile);
+//         return;
+//     }
 
-    buffer[bytes_read] = '\0';
-    close(pFile);
+//     buffer[bytes_read] = '\0';
+//     close(pFile);
 
-    // printf("DEBUG: buffer: %s\n", buffer);
+//     // printf("DEBUG: buffer: %s\n", buffer);
 
-    // look at every line in the proc file to find our PID
-    char *token = strtok(buffer, "\n");
-    while (token != NULL) {
-        // printf("DEBUG: token: %s\n", token);
-        // if we find our PID, check if it's our message
-        if (strstr(token, "calling pid") != NULL) {
-            char *pid_str = token + 13;
-            int pid = atoi(pid_str);
-            // printf("DEBUG: found_pid: %d, my_pid: %d\n", pid, my_pid);
-            if (pid == my_pid) {
-                // finding our PID on the list means it's not our turn yet
-                is_our_time = 0;
-                break;
-            }
-        }
-        token = strtok(NULL, "\n");
-    }
+//     // look at every line in the proc file to find our PID
+//     char *token = strtok(buffer, "\n");
+//     while (token != NULL) {
+//         // printf("DEBUG: token: %s\n", token);
+//         // if we find our PID, check if it's our message
+//         if (strstr(token, "calling pid") != NULL) {
+//             char *pid_str = token + 13;
+//             int pid = atoi(pid_str);
+//             // printf("DEBUG: found_pid: %d, my_pid: %d\n", pid, my_pid);
+//             if (pid == my_pid) {
+//                 // finding our PID on the list means it's not our turn yet
+//                 is_our_time = 0;
+//                 break;
+//             }
+//         }
+//         token = strtok(NULL, "\n");
+//     }
 
 
-// check if our message is in the buffer
-    if (is_our_time == 0) {
-        // if it is, go back to sleep - it's not our turn yet
-        int charFile = open(CHAR_DEV, O_RDWR);
-        if (charFile < 0) {
-            fprintf(stderr, "mytimer module isn't loaded\n");
-            return;
-        }
-        // Re-enable asynchronous I/O notification
-        fcntl(charFile, F_SETOWN, getpid());
-        int oflags = fcntl(charFile, F_GETFL);
-        fcntl(charFile, F_SETFL, oflags | FASYNC);
+// // check if our message is in the buffer
+//     if (is_our_time == 0) {
+//         // if it is, go back to sleep - it's not our turn yet
+//         int charFile = open(CHAR_DEV, O_RDWR);
+//         if (charFile < 0) {
+//             fprintf(stderr, "mytimer module isn't loaded\n");
+//             return;
+//         }
+//         // Re-enable asynchronous I/O notification
+//         fcntl(charFile, F_SETOWN, getpid());
+//         int oflags = fcntl(charFile, F_GETFL);
+//         fcntl(charFile, F_SETFL, oflags | FASYNC);
 
-        close(charFile);
-        printf("DEBUG: '%s' says: It's not my time yet. Going back to sleep.\n", timer_msg);
-        // pause();
-        return;
-    }
-// if it's not, print our message
-    printf("%s\n", timer_msg);
-    exit(0);
-}
+//         close(charFile);
+//         printf("DEBUG: '%s' says: It's not my time yet. Going back to sleep.\n", timer_msg);
+//         // pause();
+//         return;
+//     }
+// // if it's not, print our message
+//     printf("%s\n", timer_msg);
+//     exit(0);
+// }
