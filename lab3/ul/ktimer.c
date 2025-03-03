@@ -10,6 +10,8 @@
 
 #define KERN_BUF 150
 #define MSG_LEN 128
+#define CHAR_DEV "/dev/mytimer"
+#define PROC_FILE "/proc/mytimer"
 
 void sighandler(int);
 
@@ -57,7 +59,7 @@ int main(int argc, char **argv) {
     }
 
     // Opens to device file
-    pFile = open("/dev/mytimer", O_RDWR);
+    pFile = open(CHAR_DEV, O_RDWR);
     if (pFile < 0) {
         fprintf (stderr, "mytimer module isn't loaded\n");
         return 1;
@@ -97,6 +99,36 @@ int main(int argc, char **argv) {
 
     else if(argc == 2 && (strcmp(argv[1], "-r") == 0)) // remove all timers
     {
+        char buffer[KERN_BUF];
+        int procfile = open(PROC_FILE, O_RDWR);
+        if (procfile < 0) {
+            perror("Failed to open /proc/mytimer");
+            close(pFile);
+            return EXIT_FAILURE;
+        }
+        ssize_t bytes_read = read(procfile, buffer, KERN_BUF - 1);
+        if (bytes_read < 0) {
+            perror("Failed to read from /proc/mytimer");
+            close(pFile);
+            close(procfile);
+            return EXIT_FAILURE;
+        }
+        buffer[bytes_read] = '\0';
+        close(procfile);
+
+        // look for every line that starts with "calling pid"
+        char *token = strtok(buffer, "\n");
+        while (token != NULL) {
+            if (strstr(token, "calling pid") != NULL) {
+                // extract the pid from the line
+                char *pid_str = token + 13;
+                // printf("DEBUG: pid_str: [%s]\n", pid_str);
+                int pid = atoi(pid_str);
+                // send a signal to the process to kill the timer
+                kill(pid, SIGKILL);
+            }
+            token = strtok(NULL, "\n");
+        }
         ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1);
         return 0;
     }
@@ -187,9 +219,48 @@ int main(int argc, char **argv) {
 
 }
 
+// // SIGIO handler
+// void sighandler(int signo)
+// {
+//     printf("%s\n", timer_msg);
+//     // exit(0);
+// }
+
 // SIGIO handler
-void sighandler(int signo)
-{
+void sighandler(int signo) {
+    char buffer[KERN_BUF];
+    ssize_t bytes_read;
+
+    int pFile = open(CHAR_DEV, O_RDWR);
+    if (pFile < 0) {
+        fprintf(stderr, "mytimer module isn't loaded\n");
+        return;
+    }
+
+    // Read from the file descriptor to handle the I/O event
+    bytes_read = read(pFile, buffer, KERN_BUF - 1);
+    if (bytes_read < 0) {
+        perror("Failed to read from device");
+        close(pFile);
+        return;
+    }
+    buffer[bytes_read] = '\0';
+    // printf("Received SIGIO: %s\n", buffer);
+    // check if our message is in the buffer
+    if (strstr(buffer, timer_msg) != NULL) {
+        // if it is, go back to sleep - it's not our turn yet
+        close(pFile);
+
+        // Re-enable asynchronous I/O notification
+        fcntl(pFile, F_SETOWN, getpid());
+        int oflags = fcntl(pFile, F_GETFL);
+        fcntl(pFile, F_SETFL, oflags | FASYNC);
+
+        pause();
+        return;
+    }
+    // if it's not, print our message
     printf("%s\n", timer_msg);
-    // exit(0);
+    close(pFile);
+    exit(0);
 }

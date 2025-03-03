@@ -12,12 +12,15 @@
 #include <linux/fcntl.h>
 #include <linux/vmalloc.h>
 #include <linux/proc_fs.h>
+#include <linux/signal.h>
+#include <linux/sched/signal.h>
+#include <linux/pid.h>
 
 
 #define MSG_LEN               128
 #define MAX_INFO_LENGTH       PAGE_SIZE
 #define COMM_SIZE             16
-#define MAX_TIMERS            1
+#define MAX_TIMERS            2
 
 
 MODULE_LICENSE("Dual BSD/GPL");
@@ -29,7 +32,8 @@ static int proc_open(struct inode *inode, struct file *filp);
 static int mytimer_release(struct inode *inode, struct file *filp);
 static ssize_t mytimer_write(struct file *filp,
                              const char __user *buf, size_t count, loff_t *f_pos);
-static void mytimer_handler(struct timer_list*);
+static void mytimer_handler_0(struct timer_list*);
+static void mytimer_handler_1(struct timer_list*);
 static int mytimer_async(int fd, struct file *filp, int mode);
 static int mytimer_proc_show(struct seq_file *m, void *v);
 static ssize_t mytimer_read(struct file *filp,
@@ -45,8 +49,8 @@ static int next_message;
 static char *mytimer_info;
 static struct proc_dir_entry *proc_entry;
 char kernel_out[1000] = {0};
-char calling_command[COMM_SIZE] = {0};
-int calling_process = 0;
+// char calling_command[COMM_SIZE] = {0};
+// int calling_process = 0;
 int cat_process = 0;
 static unsigned long module_load_time;  // Store the module's load time
 int allowed_timers = 1;
@@ -57,6 +61,8 @@ int timer_msgs = 0;
 struct timer_info
 {
     struct timer_list timer;
+    int owner_pid;
+    char calling_command[COMM_SIZE];
     char timer_msg[MSG_LEN];
     int active;
 };
@@ -102,6 +108,7 @@ static int mytimer_init(void)
         return result;
 
     }
+
     mytimer_info = (char *)vmalloc(MAX_INFO_LENGTH);
 
     if (!mytimer_info) {
@@ -173,13 +180,18 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
     // }
     if (user_buf[1] == 'r') {
         int i;
-        for(i = 0; i < MAX_TIMERS; i++) {
+        for (i = 0; i < MAX_TIMERS; i++) {
             if (timer_pending(&timers[i].timer) && timers[i].active) {
                 del_timer_sync(&timers[i].timer); // Only delete if active
+                // struct task_struct *task = get_pid_task(timers[i].owner_pid, PIDTYPE_PID);
+                // if (task != NULL) {
+                //     // kill the process that set the timer
+                //     send_sig(SIGKILL, task, 1);
+                // }
                 timers[i].active = 0;
-                number_active_timers --;
             }
         }
+        number_active_timers = 0;
         return count;
     }
     else if(user_buf[1] == 'm') {
@@ -217,8 +229,7 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
         int j = 0;
         int k = 0;
 
-        calling_process = current->pid;
-        my_strcpy(calling_command, current->comm);
+        // calling_process = current->pid;
 
         while(user_buf[i] != ' ' && user_buf[i] != '\0' && j < 5) //extract expiration seconds from string
         {
@@ -257,8 +268,15 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
                 if(!timers[i].active) {
                     timers[i].active = 1;
                     my_strcpy(timers[i].timer_msg, user_msg);
+                    timers[i].owner_pid = current->pid;
+                    my_strcpy(timers[i].calling_command, current->comm);
                     // printk(KERN_INFO "DEBUG: timer_msg after timer set: [%s]\n", timers[i].timer_msg);
-                    timer_setup(&timers[i].timer, mytimer_handler, 0);
+                    // timer_setup(&timers[i].timer, mytimer_handler, 0);
+                    if (i == 0) {
+                        timer_setup(&timers[0].timer, mytimer_handler_0, 0);
+                    } else {
+                        timer_setup(&timers[1].timer, mytimer_handler_1, 0);
+                    }
                     number_active_timers++;
                     // printk(KERN_INFO "Number of active timers is %u\n", number_active_timers);
                     mod_timer(&timers[i].timer, jiffies + sec * HZ);
@@ -266,14 +284,8 @@ static ssize_t mytimer_write(struct file *filp, const char *buf, size_t count, l
                     return count;
                 }
             }
-        } // else {
-        // printk(KERN_INFO "%d timer(s) already exist(s)!\n", allowed_timers);
-        // memset(kernel_out, 0, sizeof(kernel_out));
-        // snprintf(kernel_out, sizeof(kernel_out), "%d timer(s) already exist(s)!\n", allowed_timers);
-        // }
+        }
     }
-// printk(KERN_INFO "Done with write\n");
-
     return count;
 }
 
@@ -282,13 +294,20 @@ static int mytimer_async(int fd, struct file *filp, int mode) {
     return fasync_helper(fd, filp, mode, &async_queue);
 }
 
-static void mytimer_handler(struct timer_list *data) {
+static void mytimer_handler_0(struct timer_list *data) {
     number_active_timers --;
     timers[0].active = 0;
     // printk(KERN_INFO "timer expired\n");
     if (async_queue)
         kill_fasync(&async_queue, SIGIO, POLL_IN);
+}
 
+static void mytimer_handler_1(struct timer_list *data) {
+    number_active_timers --;
+    timers[1].active = 0;
+    // printk(KERN_INFO "timer expired\n");
+    if (async_queue)
+        kill_fasync(&async_queue, SIGIO, POLL_IN);
 }
 
 static int mytimer_proc_show(struct seq_file *m, void *v) {
@@ -296,6 +315,7 @@ static int mytimer_proc_show(struct seq_file *m, void *v) {
     unsigned long elapsed = jiffies - module_load_time;
     unsigned long elapsed_ms = jiffies_to_msecs(elapsed);
     unsigned long expiration = 0;
+    char buf[1000];
 
     if(timers[0].active) {
         expiration = ((timers[0].timer.expires - jiffies) / HZ);
@@ -303,14 +323,25 @@ static int mytimer_proc_show(struct seq_file *m, void *v) {
         expiration = 0;
     }
 
-    seq_printf(m, "module: %s\n"
-               "load timer: %lu ms\n"
-               "calling pid: %d\n"
-               "command: %s\n"
-               "expiration: %lu s\n",
-               THIS_MODULE->name, elapsed_ms,
-               calling_process, calling_command,
-               expiration);
+    snprintf(buf, 1000, "module: %s\n"
+             "load timer: %lu ms\n",
+             THIS_MODULE->name, elapsed_ms);
+
+    if (timers[0].active) {
+        snprintf(buf + strlen(buf), 1000 - strlen(buf), "~~~ Timer 0 Active ~~~\ncalling pid: %d\n"
+                 "command: %s\n"
+                 "expiration: %lu s\n",
+                 timers[0].owner_pid, timers[0].calling_command, expiration);
+    }
+    if (timers[1].active) {
+        expiration = ((timers[1].timer.expires - jiffies) / HZ);
+        snprintf(buf + strlen(buf), 1000 - strlen(buf), "~~~ Timer 1 Active ~~~\ncalling pid: %d\n"
+                 "command: %s\n"
+                 "expiration: %lu s\n",
+                 timers[1].owner_pid, timers[1].calling_command, expiration);
+    }
+
+    seq_printf(m, "%s", buf);
 
     return 0;
 }

@@ -41,3 +41,31 @@ echo "TEST: Modify the 30s timer to 2s:"
 ./ktimer -s 2 billy &
 echo "TEST: Listing timers:"
 ./ktimer -l
+
+echo "Sleeping 3..."
+sleep 3
+
+echo "TEST: Set a 5
+s timer called joe:"
+./ktimer -s 5 joe &
+echo "TEST: Listing timers:"
+./ktimer -l
+
+echo "Removing all timers..."
+./ktimer -r
+
+echo "TEST: Listing timers:"
+./ktimer -l
+
+echo "adding second timer..."
+./ktimer -m 2
+
+echo "Setting timer A for 10s..."
+./ktimer -s 5 A &
+echo "Setting timer B for 5s..."
+./ktimer -s 3 B &
+
+echo "TEST: Listing timers:"
+./ktimer -l
+
+
