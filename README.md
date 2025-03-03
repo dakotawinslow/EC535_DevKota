@@ -44,3 +44,5 @@ Work goes in here
   - Already implemented in the last lab, can port over easily  
 
 - Maybe implement `-m` if the timer...  
+
+Ok we are so close, we just need the timer who isn't being called to set itself to wake back up again after being woken by mistake. I think maybe you can't assign yourself to the async file from a sighandler? So maybe we redo it in main instead, assuming we return to main if we don't end in sighandler. 
