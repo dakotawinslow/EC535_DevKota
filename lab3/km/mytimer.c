@@ -324,7 +324,7 @@ static int mytimer_proc_show(struct seq_file *m, void *v) {
     }
 
     snprintf(buf, 1000, "module: %s\n"
-             "load timer: %lu ms\n",
+             "uptime: %lu ms\n",
              THIS_MODULE->name, elapsed_ms);
 
     if (timers[0].active) {

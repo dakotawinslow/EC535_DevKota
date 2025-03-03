@@ -45,8 +45,7 @@ echo "TEST: Listing timers:"
 echo "Sleeping 3..."
 sleep 3
 
-echo "TEST: Set a 5
-s timer called joe:"
+echo "TEST: Set a 5s timer called joe:"
 ./ktimer -s 5 joe &
 echo "TEST: Listing timers:"
 ./ktimer -l
@@ -60,10 +59,14 @@ echo "TEST: Listing timers:"
 echo "adding second timer..."
 ./ktimer -m 2
 
+sleep 1
+
 echo "Setting timer A for 10s..."
 ./ktimer -s 5 A &
 echo "Setting timer B for 5s..."
 ./ktimer -s 3 B &
+
+sleep 1
 
 echo "TEST: Listing timers:"
 ./ktimer -l

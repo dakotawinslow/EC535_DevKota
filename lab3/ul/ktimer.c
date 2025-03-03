@@ -37,7 +37,7 @@ void print_version() {
 }
 
 int main(int argc, char **argv) {
-    int pFile, oflags;
+    int charFile, oflags;
     struct sigaction action;
 
     // There is no valid command without an argument
@@ -59,8 +59,8 @@ int main(int argc, char **argv) {
     }
 
     // Opens to device file
-    pFile = open(CHAR_DEV, O_RDWR);
-    if (pFile < 0) {
+    charFile = open(CHAR_DEV, O_RDWR);
+    if (charFile < 0) {
         fprintf (stderr, "mytimer module isn't loaded\n");
         return 1;
     }
@@ -71,9 +71,9 @@ int main(int argc, char **argv) {
     action.sa_flags = SA_SIGINFO;
     sigemptyset(&action.sa_mask);
     sigaction(SIGIO, &action, NULL);
-    fcntl(pFile, F_SETOWN, getpid());
-    oflags = fcntl(pFile, F_GETFL);
-    fcntl(pFile, F_SETFL, oflags | FASYNC);
+    fcntl(charFile, F_SETOWN, getpid());
+    oflags = fcntl(charFile, F_GETFL);
+    fcntl(charFile, F_SETFL, oflags | FASYNC);
 
     // Write to file.
     memset(to_kernel, 0, KERN_BUF);
@@ -83,14 +83,14 @@ int main(int argc, char **argv) {
 
     if(argc == 2 && (strcmp(argv[1], "-l") == 0)) // list timer(s) expiration message(s) and time(s)
     {
-        // ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1);
+        // ssize_t bytes_written = write(charFile, to_kernel, strlen(to_kernel) + 1);
         // printf("DEBUG: user_input before write: [%s]\n", to_kernel);
         // read the device and store in a buffer
         char buffer[KERN_BUF];
-        ssize_t bytes_read = read(pFile, buffer, KERN_BUF - 1);
+        ssize_t bytes_read = read(charFile, buffer, KERN_BUF - 1);
         if (bytes_read < 0) {
             perror("Failed to read from device");
-            close(pFile);
+            close(charFile);
             return EXIT_FAILURE;
         }
         buffer[bytes_read - 4] = '\0';
@@ -103,13 +103,13 @@ int main(int argc, char **argv) {
         int procfile = open(PROC_FILE, O_RDWR);
         if (procfile < 0) {
             perror("Failed to open /proc/mytimer");
-            close(pFile);
+            close(charFile);
             return EXIT_FAILURE;
         }
         ssize_t bytes_read = read(procfile, buffer, KERN_BUF - 1);
         if (bytes_read < 0) {
             perror("Failed to read from /proc/mytimer");
-            close(pFile);
+            close(charFile);
             close(procfile);
             return EXIT_FAILURE;
         }
@@ -129,14 +129,14 @@ int main(int argc, char **argv) {
             }
             token = strtok(NULL, "\n");
         }
-        ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1);
+        ssize_t bytes_written = write(charFile, to_kernel, strlen(to_kernel) + 1);
         return 0;
     }
 
     else if(argc == 3 && (strcmp(argv[1], "-m") == 0)) // set the kernel timer count to [count]
     {
         if (argv[2][0] == '2' || argv[2][0] == '1') {
-            ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1);
+            ssize_t bytes_written = write(charFile, to_kernel, strlen(to_kernel) + 1);
             return 0;
         } else {
             printf("Only 1 or 2 timers allowed!\n");
@@ -151,10 +151,10 @@ int main(int argc, char **argv) {
         // Check if timer with message already exists
         // read the device and store in a buffer
         char buffer[KERN_BUF];
-        ssize_t bytes_read = read(pFile, buffer, KERN_BUF - 1);
+        ssize_t bytes_read = read(charFile, buffer, KERN_BUF - 1);
         if (bytes_read < 0) {
             perror("Failed to read from device");
-            close(pFile);
+            close(charFile);
             return EXIT_FAILURE;
         }
         buffer[bytes_read] = '\0';
@@ -190,9 +190,9 @@ int main(int argc, char **argv) {
             if (strcmp(token, argv[3]) == 0) {
                 // printf("DEBUG: token_msg: [%s], argv[3]: [%s]\n", token_msg, argv[3]);
                 snprintf(to_kernel, sizeof(to_kernel), "-s %s %s", argv[2], argv[3]);
-                ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1); //access timer_write kernel function with string indicating how to setup new timer
+                ssize_t bytes_written = write(charFile, to_kernel, strlen(to_kernel) + 1); //access timer_write kernel function with string indicating how to setup new timer
                 printf("The timer %s was updated!\n", argv[3]);
-                close(pFile);
+                close(charFile);
                 return 0;
             }
             token = strtok(NULL, "\n");
@@ -205,16 +205,16 @@ int main(int argc, char **argv) {
         }
 
         snprintf(to_kernel, sizeof(to_kernel), "-s %s %s", argv[2], argv[3]);
-        // read(pFile, )
+        // read(charFile, )
         // printf("DEBUG: user_input before write: [%s]\n", to_kernel);
-        ssize_t bytes_written = write(pFile, to_kernel, strlen(to_kernel) + 1); //access timer_write kernel function with string indicating how to setup new timer
+        ssize_t bytes_written = write(charFile, to_kernel, strlen(to_kernel) + 1); //access timer_write kernel function with string indicating how to setup new timer
         pause();
     }
 
 
     // printf("Closing out!\n");
     // Closes.
-    close(pFile);
+    close(charFile);
     return 0;
 
 }
@@ -228,39 +228,72 @@ int main(int argc, char **argv) {
 
 // SIGIO handler
 void sighandler(int signo) {
+    struct sigaction sa;
+    sa.sa_handler = sighandler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGIO, &sa, NULL);
     char buffer[KERN_BUF];
+    int is_our_time = 1;
     ssize_t bytes_read;
+    int my_pid = getpid();
 
-    int pFile = open(CHAR_DEV, O_RDWR);
+    // Read from the proc file
+    int pFile = open(PROC_FILE, O_RDWR);
     if (pFile < 0) {
-        fprintf(stderr, "mytimer module isn't loaded\n");
+        fprintf(stderr, "Failed to open /proc/mytimer\n");
         return;
     }
-
-    // Read from the file descriptor to handle the I/O event
     bytes_read = read(pFile, buffer, KERN_BUF - 1);
     if (bytes_read < 0) {
-        perror("Failed to read from device");
+        perror("Failed to read from /proc/mytimer");
         close(pFile);
         return;
     }
+
     buffer[bytes_read] = '\0';
-    // printf("Received SIGIO: %s\n", buffer);
-    // check if our message is in the buffer
-    if (strstr(buffer, timer_msg) != NULL) {
+    close(pFile);
+
+    // printf("DEBUG: buffer: %s\n", buffer);
+
+    // look at every line in the proc file to find our PID
+    char *token = strtok(buffer, "\n");
+    while (token != NULL) {
+        // printf("DEBUG: token: %s\n", token);
+        // if we find our PID, check if it's our message
+        if (strstr(token, "calling pid") != NULL) {
+            char *pid_str = token + 13;
+            int pid = atoi(pid_str);
+            // printf("DEBUG: found_pid: %d, my_pid: %d\n", pid, my_pid);
+            if (pid == my_pid) {
+                // finding our PID on the list means it's not our turn yet
+                is_our_time = 0;
+                break;
+            }
+        }
+        token = strtok(NULL, "\n");
+    }
+
+
+// check if our message is in the buffer
+    if (is_our_time == 0) {
         // if it is, go back to sleep - it's not our turn yet
-        close(pFile);
-
+        int charFile = open(CHAR_DEV, O_RDWR);
+        if (charFile < 0) {
+            fprintf(stderr, "mytimer module isn't loaded\n");
+            return;
+        }
         // Re-enable asynchronous I/O notification
-        fcntl(pFile, F_SETOWN, getpid());
-        int oflags = fcntl(pFile, F_GETFL);
-        fcntl(pFile, F_SETFL, oflags | FASYNC);
+        fcntl(charFile, F_SETOWN, getpid());
+        int oflags = fcntl(charFile, F_GETFL);
+        fcntl(charFile, F_SETFL, oflags | FASYNC);
 
-        pause();
+        close(charFile);
+        printf("DEBUG: '%s' says: It's not my time yet. Going back to sleep.\n", timer_msg);
+        // pause();
         return;
     }
-    // if it's not, print our message
+// if it's not, print our message
     printf("%s\n", timer_msg);
-    close(pFile);
     exit(0);
 }
