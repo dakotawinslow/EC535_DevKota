@@ -5,7 +5,7 @@ else
 	PWD := $(shell pwd)
 	ARCH := arm
 	CROSS := arm-linux-gnueabihf-
-	ccflags-y := -w
+	ccflags-y := 
 
 default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS) modules
