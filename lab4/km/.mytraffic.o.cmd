@@ -731,16 +731,32 @@ deps_/ad/eng/users/d/e/devinkt/EC535/lab4/EC535_DevKota/lab4/km/mytraffic.o := \
     $(wildcard include/config/generic/irq/debugfs.h) \
     $(wildcard include/config/handle/domain/irq.h) \
   arch/arm/include/asm/hw_irq.h \
-  include/linux/gpio/consumer.h \
+  include/linux/gpio.h \
     $(wildcard include/config/gpiolib.h) \
-    $(wildcard include/config/gpio/sysfs.h) \
+    $(wildcard include/config/arch/have/custom/gpio/h.h) \
+  arch/arm/include/asm/gpio.h \
+    $(wildcard include/config/arch/nr/gpio.h) \
+  include/asm-generic/gpio.h \
+  include/linux/of.h \
+    $(wildcard include/config/of/dynamic.h) \
+    $(wildcard include/config/sparc.h) \
+    $(wildcard include/config/of/promtree.h) \
+    $(wildcard include/config/of/kobj.h) \
+    $(wildcard include/config/of.h) \
+    $(wildcard include/config/of/numa.h) \
+    $(wildcard include/config/of/overlay.h) \
+  include/linux/mod_devicetable.h \
+  include/linux/property.h \
+  include/linux/gpio/driver.h \
+    $(wildcard include/config/gpiolib/irqchip.h) \
+    $(wildcard include/config/gpio/generic.h) \
+    $(wildcard include/config/of/gpio.h) \
+    $(wildcard include/config/pinctrl.h) \
   include/linux/device.h \
     $(wildcard include/config/debug/devres.h) \
     $(wildcard include/config/generic/msi/irq/domain.h) \
-    $(wildcard include/config/pinctrl.h) \
     $(wildcard include/config/generic/msi/irq.h) \
     $(wildcard include/config/dma/cma.h) \
-    $(wildcard include/config/of.h) \
     $(wildcard include/config/devtmpfs.h) \
     $(wildcard include/config/sysfs/deprecated.h) \
   include/linux/ioport.h \
@@ -757,6 +773,33 @@ deps_/ad/eng/users/d/e/devinkt/EC535/lab4/EC535_DevKota/lab4/km/mytraffic.o := \
     $(wildcard include/config/arm/dma/use/iommu.h) \
     $(wildcard include/config/arch/omap.h) \
   include/linux/pm_wakeup.h \
+  include/linux/irqchip/chained_irq.h \
+  include/linux/irqdomain.h \
+    $(wildcard include/config/irq/domain.h) \
+  include/linux/pinctrl/pinctrl.h \
+    $(wildcard include/config/generic/pinconf.h) \
+  include/linux/seq_file.h \
+  include/linux/cred.h \
+    $(wildcard include/config/debug/credentials.h) \
+    $(wildcard include/config/keys.h) \
+  include/linux/key.h \
+  include/linux/assoc_array.h \
+    $(wildcard include/config/associative/array.h) \
+  include/linux/selinux.h \
+    $(wildcard include/config/security/selinux.h) \
+  include/linux/sched/user.h \
+    $(wildcard include/config/fanotify.h) \
+    $(wildcard include/config/posix/mqueue.h) \
+    $(wildcard include/config/bpf/syscall.h) \
+    $(wildcard include/config/net.h) \
+  include/linux/pinctrl/pinctrl-state.h \
+  include/linux/pinctrl/devinfo.h \
+  include/linux/pinctrl/consumer.h \
+  include/linux/pinctrl/pinconf-generic.h \
+    $(wildcard include/config/debug/fs.h) \
+  include/linux/pinctrl/machine.h \
+  include/linux/gpio/consumer.h \
+    $(wildcard include/config/gpio/sysfs.h) \
 
 /ad/eng/users/d/e/devinkt/EC535/lab4/EC535_DevKota/lab4/km/mytraffic.o: $(deps_/ad/eng/users/d/e/devinkt/EC535/lab4/EC535_DevKota/lab4/km/mytraffic.o)
 
