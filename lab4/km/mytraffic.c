@@ -9,9 +9,10 @@
 #include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
 #include <linux/device.h>
-#include <linux/timer.h> 
+#include <linux/timer.h>
 #include <linux/sched.h>
 #include <linux/jiffies.h>
+#include <linux/string.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Devin Kot-Thompson/Dakota Winslow");
@@ -36,9 +37,9 @@ static void mytraffic_exit(void);
 static int my_open(struct inode *inode, struct file *file);
 static int my_release(struct inode *inode, struct file *file);
 static ssize_t my_read(struct file *file, char __user *user_buffer,
-    size_t size, loff_t *offset);
+                       size_t size, loff_t *offset);
 static ssize_t my_write(struct file *file, const char __user *user_buffer,
-    size_t size, loff_t *offset);
+                        size_t size, loff_t *offset);
 void traffic_mode(unsigned mode);
 void normal_mode(void);
 static void timer_callback(struct timer_list *t);
@@ -65,7 +66,7 @@ struct file_operations fops = {
 module_init(mytraffic_init);
 module_exit(mytraffic_exit);
 
-static int mytraffic_init(void){
+static int mytraffic_init(void) {
     int err;
     // int red_status;
     // int green_status;
@@ -75,21 +76,21 @@ static int mytraffic_init(void){
 
     printk(KERN_INFO "character device registration returned %d\n", err);
 
-    if(gpio_request(RED, "red_led")){
+    if(gpio_request(RED, "red_led")) {
         printk(KERN_ALERT "failed to request gpio");
         return -EINVAL;
     }
 
     gpio_direction_output(RED, 0);
 
-    if(gpio_request(YELLOW, "yellow_led")){
+    if(gpio_request(YELLOW, "yellow_led")) {
         printk(KERN_ALERT "failed to request gpio");
         return -EINVAL;
     }
-    
+
     gpio_direction_output(YELLOW, 0);
 
-    if(gpio_request(GREEN, "green_led")){
+    if(gpio_request(GREEN, "green_led")) {
         printk(KERN_ALERT "failed to request gpio");
         return -EINVAL;
     }
@@ -156,7 +157,7 @@ static int my_release(struct inode *inode, struct file *file)
 }
 
 static ssize_t my_read(struct file *file, char __user *user_buffer,
-    size_t size, loff_t *offset)
+                       size_t size, loff_t *offset)
 {
     /*Your module should set up a character device13 at /dev/mytraffic that returns the following information when read (e.g., using cat /dev/mytraffic):
     Current operational mode (i.e., “normal”, “flashing-red”, or “flashing-yellow”)
@@ -165,14 +166,51 @@ static ssize_t my_read(struct file *file, char __user *user_buffer,
     Whether or not a pedestrian is “present” (i.e., currently crossing or waiting to cross after pressing the call button)
     This field is only required if your traffic light supports a pedestrian call button (see “Additional Features” below)
     */
-   char test[] = "Hello World from read\n";
+    char test[] = "Hello World from read\n";
 
-   ssize_t len = min((ssize_t)((sizeof(test)/sizeof(test[0])) - *offset), (ssize_t)size);
-   
-   if(len <= 0){
+    char output_msg[120];
+
+    // get current operational mode
+    char mode[20];
+    switch (timer.mode)
+    {
+    case NORMAL:
+        strscpy(mode, "Mode: Normal", 20);
+        break;
+    case FLASH_RED:
+        strscpy(mode, "Mode: Flashing Red", 20);
+        break;
+    case FLASH_YELLOW:
+        strscpy(mode, "Mode: Flashing Yellow", 20);
+        break;
+    default:
+        strscpy(mode, "Unknown Mode: %d", timer.mode);
+        break;
+    }
+
+    // get current cycle rate
+    char rate[20];
+    snprintf(rate, 20, "Cycle Rate: %d Hz", 1);
+
+    // get current status of each light
+    char r_status[20];
+    char y_status[20];
+    char g_status[20];
+    snprintf(r_status, 20, "Red: %d", gpio_get_value(RED));
+    snprintf(y_status, 20, "Yellow: %d", gpio_get_value(YELLOW));
+    snprintf(g_status, 20, "Green: %d", gpio_get_value(GREEN));
+
+    // TODO get pedestrian status
+
+    snprintf(output_msg, 120, "%s\n%s\n%s\n%s\n", mode, rate, r_status, y_status, g_status);
+
+
+    ssize_t len = min((ssize_t)((sizeof(test)/sizeof(test[0])) - *offset), (ssize_t)size);
+
+    if(len <= 0) {
         return 0;
-   }
-    if(copy_to_user(user_buffer, test + *offset, len)){
+    }
+    if(copy_to_user(user_buffer, output_msg + *offset, len)) {
         return -EFAULT;
     }
 
@@ -182,17 +220,17 @@ static ssize_t my_read(struct file *file, char __user *user_buffer,
 }
 
 static ssize_t my_write(struct file *file, const char __user *user_buffer,
-    size_t size, loff_t *offset)
+                        size_t size, loff_t *offset)
 {
     char *input_data;
     ssize_t ret = size;
 
-    if((input_data = kmalloc(size + 1, GFP_KERNEL)) == NULL){
+    if((input_data = kmalloc(size + 1, GFP_KERNEL)) == NULL) {
         printk(KERN_ALERT "failed to allocate write buffer\n");
         return -ENOMEM;
     }
 
-    if(copy_from_user(input_data, user_buffer, size)){
+    if(copy_from_user(input_data, user_buffer, size)) {
         printk(KERN_ALERT "failed to copy to write buffer\n");
         kfree(input_data);
         return -EFAULT;
@@ -204,16 +242,16 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer,
 
     switch (input_data[0])
     {
-    case  '0': 
+    case  '0':
         gpio_set_value(RED, 1);
         break;
-    case  '1': 
+    case  '1':
         gpio_set_value(GREEN, 1);
         break;
-    case  '2': 
+    case  '2':
         gpio_set_value(YELLOW, 1);
         break;
-    
+
     default:
         gpio_set_value(RED, 0);
         gpio_set_value(GREEN, 0);
@@ -224,7 +262,7 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer,
     kfree(input_data);
 
     return ret;
-    
+
 }
 
 void traffic_mode(unsigned mode)
@@ -232,12 +270,12 @@ void traffic_mode(unsigned mode)
 
     switch (mode)
     {
-    case NORMAL: 
+    case NORMAL:
         normal_mode();
         break;
     default:
         normal_mode();
-        break;        
+        break;
     }
 
 }
@@ -267,12 +305,12 @@ static void timer_callback(struct timer_list *t)
             gpio_set_value(YELLOW, 0);
             gpio_set_value(RED, 0);
             complete->iteration ++;
-        }else if(iteration == 4){
+        } else if(iteration == 4) {
             gpio_set_value(GREEN, 0);
             gpio_set_value(YELLOW, 1);
             gpio_set_value(RED, 0);
             complete->iteration ++;
-        }else{
+        } else {
             gpio_set_value(GREEN, 0);
             gpio_set_value(YELLOW, 0);
             gpio_set_value(RED, 1);
@@ -286,12 +324,12 @@ static void timer_callback(struct timer_list *t)
             gpio_set_value(YELLOW, 0);
             gpio_set_value(RED, 0);
             complete->iteration ++;
-        }else if(iteration == 4){
+        } else if(iteration == 4) {
             gpio_set_value(GREEN, 0);
             gpio_set_value(YELLOW, 1);
             gpio_set_value(RED, 0);
             complete->iteration ++;
-        }else{
+        } else {
             gpio_set_value(GREEN, 0);
             gpio_set_value(YELLOW, 0);
             gpio_set_value(RED, 1);
