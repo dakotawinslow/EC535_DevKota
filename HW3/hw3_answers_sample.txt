@@ -1,0 +1,28 @@
+-------------------------------------------------------------------
+Profiling Results
+-------------------------------------------------------------------
+
+qsort_large spends <XXX>% of its time executing the function <function_name> based on the flat profile.
+
+
+-------------------------------------------------------------------
+Optimization
+-------------------------------------------------------------------
+
++-----------------------+--------------------+--------------------+
+|Optimizations          |Time on eng-grid    |Time on BeagleBone  |
++-----------------------+--------------------+--------------------+
+|Default                | 1m1.111s           | 1m1.111s           |
++-----------------------+--------------------+--------------------+
+|myOptimization1        | 1m1.111s           |                    |
++-----------------------+--------------------+--------------------+
+|myOptimization2        | 1m1.111s           | 1m1.111s           |
++-----------------------+--------------------+--------------------+
+|Optional 1 & 2 combined| 1m1.111s           |                    |
++-----------------------+--------------------+--------------------+
+
+myOptimization1: My best optimization method explained at most in 250 characters.
+
+myOptimization2: My second best optimization method explained at most in 250 characters.
+
+Difference btw grid and embedded: Comments on timing differences at most in 250 characters.
