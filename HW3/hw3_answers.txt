@@ -1,0 +1,29 @@
+-------------------------------------------------------------------
+Profiling Results
+-------------------------------------------------------------------
+
+qsort_large spends 68% of its time executing the function compare() based on the flat profile.
+
+
+-------------------------------------------------------------------
+Optimization
+-------------------------------------------------------------------
+
+User Timings
++-----------------------+--------------------+--------------------+
+|Optimizations          |Time on eng-grid    |Time on BeagleBone  |
++-----------------------+--------------------+--------------------+
+|Default                | 0m0.035s           | 1m1.111s           |
++-----------------------+--------------------+--------------------+
+|Source Code Opt.       | 0m0.032s           | 1m1.111s           |
++-----------------------+--------------------+--------------------+
+|Compiler Opt.          | 0m0.033s           | 1m1.111s           |
++-----------------------+--------------------+--------------------+
+|Optional 1 & 2 combined| 0m0.027s           | 1m1.111s           |
++-----------------------+--------------------+--------------------+
+
+Source Code Optimizations: - Eliminated unnecessary step of taking square root of distance. Replaced pow() with x*x. Removed extra variable assignment in compare().
+
+Compiler Optimizations: Used gcc -Ofast flag, which optimizes for max speed at cost of program size, memory usage, and IEEE standards compliance.
+
+Difference btw grid and embedded: Comments on timing differences at most in 250 characters.
