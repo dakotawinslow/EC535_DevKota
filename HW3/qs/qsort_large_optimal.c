@@ -11,18 +11,34 @@ struct my3DVertexStruct {
     double distance;
 };
 
-int compare(const void *elem1, const void *elem2)
-{
-    /* D = [(x1 - x2)^2 + (y1 - y2)^2 + (z1 - z2)^2]^(1/2) */
-    /* sort based on distances from the origin... */
+// int compare(const void *elem1, const void *elem2)
+// {
+//     /* D = [(x1 - x2)^2 + (y1 - y2)^2 + (z1 - z2)^2]^(1/2) */
+//     /* sort based on distances from the origin... */
 
-    double distance1, distance2;
+//     double distance1, distance2;
 
-    distance1 = (*((struct my3DVertexStruct *)elem1)).distance;
-    distance2 = (*((struct my3DVertexStruct *)elem2)).distance;
+//     distance1 = (*((struct my3DVertexStruct *)elem1)).distance;
+//     distance2 = (*((struct my3DVertexStruct *)elem2)).distance;
 
-    return (distance1 > distance2) ? 1 : ((distance1 == distance2) ? 0 : -1);
+//     return (distance1 > distance2) ? 1 : ((distance1 == distance2) ? 0 : -1);
+// }
+
+int compare(const void *a, const void *b) {
+    // Directly reference the distance field of the struct
+    // instead of using a pointer dereference
+    // This avoids the need for a temporary variable
+    const struct my3DVertexStruct *v1 = (const struct my3DVertexStruct *)a;
+    const struct my3DVertexStruct *v2 = (const struct my3DVertexStruct *)b;
+
+    // Skip the ternary, which i find harder to read and is no differrent from
+    // ifs after optimization
+
+    if (v1->distance < v2->distance) return -1;
+    if (v1->distance > v2->distance) return 1;
+    return 0;
 }
+
 
 int
 mainloop(int argc, char *argv[]) {
