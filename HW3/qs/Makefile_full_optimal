@@ -4,9 +4,9 @@ FILE2 = qsort_large.c
 all: qsort_small qsort_large
 
 qsort_small: qsort_small.c Makefile
-	gcc qsort_small.c -o qsort_small -lm -O3 -g
+	gcc qsort_small.c -o qsort_small -lm -Ofast -g 
 qsort_large: qsort_large.c Makefile
-	gcc qsort_large_optimal.c -o qsort_large -lm -O3 -g
+	gcc qsort_large_optimal.c -o qsort_large -lm -Ofast -g
 
 clean:
 	rm -rf qsort_small qsort_large output*

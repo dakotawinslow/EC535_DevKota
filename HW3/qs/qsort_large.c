@@ -25,7 +25,7 @@ int compare(const void *elem1, const void *elem2)
 }
 
 int
-mainloop(int argc, char *argv[]) {
+main(int argc, char *argv[]) {
     struct my3DVertexStruct array[MAXARRAY];
     FILE *fp;
     int i,count=0;
@@ -54,11 +54,11 @@ mainloop(int argc, char *argv[]) {
     return 0;
 }
 
-int main(int argc, char *argv[]) {
-    int i;
-    int result = 0;
-    for (i = 0; i < LOOPS; i++) {
-        result = mainloop(argc, argv);
-    }
-    return result;
-}
+// int main(int argc, char *argv[]) {
+//     int i;
+//     int result = 0;
+//     for (i = 0; i < LOOPS; i++) {
+//         result = mainloop(argc, argv);
+//     }
+//     return result;
+// }

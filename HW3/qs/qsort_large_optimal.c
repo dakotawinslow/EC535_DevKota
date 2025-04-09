@@ -27,21 +27,16 @@ struct my3DVertexStruct {
 int compare(const void *a, const void *b) {
     // Directly reference the distance field of the struct
     // instead of using a pointer dereference
-    // This avoids the need for a temporary variable
+    // This avoids the need for a temporary variable - winslowd
     const struct my3DVertexStruct *v1 = (const struct my3DVertexStruct *)a;
     const struct my3DVertexStruct *v2 = (const struct my3DVertexStruct *)b;
 
-    // Skip the ternary, which i find harder to read and is no differrent from
-    // ifs after optimization
-
-    if (v1->distance < v2->distance) return -1;
-    if (v1->distance > v2->distance) return 1;
-    return 0;
+    return (v1->distance > v2->distance) ? 1 : ((v1->distance == v2->distance) ? 0 : -1);
 }
 
 
 int
-mainloop(int argc, char *argv[]) {
+main(int argc, char *argv[]) {
     struct my3DVertexStruct array[MAXARRAY];
     FILE *fp;
     int i,count=0;
@@ -58,7 +53,9 @@ mainloop(int argc, char *argv[]) {
             array[count].x = x;
             array[count].y = y;
             array[count].z = z;
-            array[count].distance = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
+            // array[count].distance = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
+            // Avoid using pow and sqrt for performance
+            array[count].distance = x * x + y * y + z * z; // Store squared distance - winslowd
             count++;
         }
     }
@@ -70,11 +67,11 @@ mainloop(int argc, char *argv[]) {
     return 0;
 }
 
-int main(int argc, char *argv[]) {
-    int i;
-    int result = 0;
-    for (i = 0; i < LOOPS; i++) {
-        result = mainloop(argc, argv);
-    }
-    return result;
-}
+// int main(int argc, char *argv[]) {
+//     int i;
+//     int result = 0;
+//     for (i = 0; i < LOOPS; i++) {
+//         result = mainloop(argc, argv);
+//     }
+//     return result;
+// }
